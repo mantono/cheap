@@ -3,9 +3,9 @@ use std::sync::atomic::Ordering::Relaxed;
 use std::sync::{atomic::AtomicUsize, Arc, Condvar, Mutex};
 use std::time::Duration;
 
-use crate::PrioQueue;
+use crate::queue::PrioQueue;
 
-pub fn prio_channel<T>(capacity: usize) -> (Sender<T>, Receiver<T>)
+pub fn channel<T>(capacity: usize) -> (Sender<T>, Receiver<T>)
 where
     T: Ord,
 {
@@ -257,11 +257,11 @@ mod tests {
 
     use crate::channel::{RecvError, SendError};
 
-    use super::prio_channel;
+    use super::channel;
 
     #[test]
     fn test_different_threads_offer_poll() {
-        let (send, rec) = prio_channel::<usize>(4);
+        let (send, rec) = channel::<usize>(4);
 
         thread::spawn(move || {
             send.offer(32).unwrap();
@@ -276,7 +276,7 @@ mod tests {
 
     #[test]
     fn test_multiple_producers() {
-        let (send0, rec) = prio_channel::<usize>(4);
+        let (send0, rec) = channel::<usize>(4);
 
         let send1 = send0.clone();
 
@@ -300,7 +300,7 @@ mod tests {
 
     #[test]
     fn test_multiple_consumers() {
-        let (send, rec0) = prio_channel::<usize>(4);
+        let (send, rec0) = channel::<usize>(4);
 
         let rec1 = rec0.clone();
 
@@ -325,7 +325,7 @@ mod tests {
 
     #[test]
     fn test_send_to_closed_channel() {
-        let (send, rec) = prio_channel::<usize>(4);
+        let (send, rec) = channel::<usize>(4);
         drop(rec);
 
         thread::spawn(move || {
@@ -335,7 +335,7 @@ mod tests {
 
     #[test]
     fn test_different_threads_with_timeouts() {
-        let (send, rec) = prio_channel::<usize>(4);
+        let (send, rec) = channel::<usize>(4);
 
         thread::spawn(move || {
             send.offer_timeout(32, Duration::from_secs(10)).unwrap();
