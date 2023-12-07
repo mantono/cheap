@@ -281,20 +281,20 @@ mod tests {
         let send1 = send0.clone();
 
         thread::spawn(move || {
-            send0.clone().offer(32).unwrap();
+            send0.clone().offer(1).unwrap();
         })
         .join()
         .unwrap();
 
         thread::spawn(move || {
-            send1.clone().offer(32).unwrap();
+            send1.clone().offer(2).unwrap();
         })
         .join()
         .unwrap();
 
         thread::spawn(move || {
-            assert_eq!(Ok(32), rec.poll());
-            assert_eq!(Ok(32), rec.poll());
+            assert_eq!(Ok(2), rec.poll());
+            assert_eq!(Ok(1), rec.poll());
         });
     }
 
