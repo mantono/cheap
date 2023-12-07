@@ -2,7 +2,7 @@ pub mod channel;
 
 use std::collections::BinaryHeap;
 
-/// A priority queue with a fixed capacity
+/// PrioQueue is a priority queue (heap) with a fixed capacity.
 pub struct PrioQueue<T>
 where
     T: Ord,
