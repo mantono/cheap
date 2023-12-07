@@ -108,4 +108,15 @@ mod tests {
         assert!(buffer.poll().is_some());
         assert_eq!(0, buffer.size());
     }
+
+    #[test]
+    fn test_priority() {
+        let mut buffer: PrioQueue<usize> = PrioQueue::new();
+        buffer.offer(1).unwrap();
+        buffer.offer(3).unwrap();
+        buffer.offer(2).unwrap();
+        assert_eq!(Some(3), buffer.poll());
+        assert_eq!(Some(2), buffer.poll());
+        assert_eq!(Some(1), buffer.poll());
+    }
 }
