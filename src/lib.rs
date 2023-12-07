@@ -57,6 +57,15 @@ where
     }
 }
 
+impl<T> Default for PrioQueue<T>
+where
+    T: Ord,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::PrioQueue;
