@@ -1,7 +1,7 @@
 use std::collections::BinaryHeap;
 
-/// PrioQueue is a priority queue (heap) with a fixed capacity.
-pub(crate) struct PrioQueue<T>
+/// FixedHeap is a bianry heap (priority queue) with a fixed capacity.
+pub(crate) struct FixedHeap<T>
 where
     T: Ord,
 {
@@ -9,20 +9,20 @@ where
     capacity: usize,
 }
 
-impl<T> PrioQueue<T>
+impl<T> FixedHeap<T>
 where
     T: Ord,
 {
-    pub fn new() -> PrioQueue<T> {
+    pub fn new() -> FixedHeap<T> {
         Self::with_capacity(32)
     }
 
-    pub fn with_capacity(capacity: usize) -> PrioQueue<T> {
+    pub fn with_capacity(capacity: usize) -> FixedHeap<T> {
         if capacity == 0 {
             panic!("Tried to create an empty queue")
         }
         let data = BinaryHeap::with_capacity(capacity);
-        PrioQueue { data, capacity }
+        FixedHeap { data, capacity }
     }
 
     pub fn offer(&mut self, item: T) -> Result<(), T> {
@@ -56,7 +56,7 @@ where
     }
 }
 
-impl<T> Default for PrioQueue<T>
+impl<T> Default for FixedHeap<T>
 where
     T: Ord,
 {
@@ -67,41 +67,41 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::PrioQueue;
+    use super::FixedHeap;
 
     #[test]
     fn test_new() {
-        let _: PrioQueue<char> = PrioQueue::new();
+        let _: FixedHeap<char> = FixedHeap::new();
     }
 
     #[test]
     fn test_is_empty() {
-        let buffer: PrioQueue<char> = PrioQueue::new();
+        let buffer: FixedHeap<char> = FixedHeap::new();
         assert!(buffer.is_empty());
     }
 
     #[test]
     fn test_capacity() {
-        let buffer: PrioQueue<char> = PrioQueue::with_capacity(4);
+        let buffer: FixedHeap<char> = FixedHeap::with_capacity(4);
         assert_eq!(4, buffer.capacity());
     }
 
     #[test]
     fn test_offer() {
-        let mut buffer: PrioQueue<usize> = PrioQueue::with_capacity(1);
+        let mut buffer: FixedHeap<usize> = FixedHeap::with_capacity(1);
         assert!(buffer.offer(0).is_ok());
     }
 
     #[test]
     fn test_offer_full() {
-        let mut buffer: PrioQueue<usize> = PrioQueue::with_capacity(1);
+        let mut buffer: FixedHeap<usize> = FixedHeap::with_capacity(1);
         assert!(buffer.offer(0).is_ok());
         assert!(buffer.offer(0).is_err());
     }
 
     #[test]
     fn test_is_full() {
-        let mut buffer: PrioQueue<usize> = PrioQueue::with_capacity(1);
+        let mut buffer: FixedHeap<usize> = FixedHeap::with_capacity(1);
         assert!(!buffer.is_full());
         assert!(buffer.offer(0).is_ok());
         assert!(buffer.is_full());
@@ -109,7 +109,7 @@ mod tests {
 
     #[test]
     fn test_size() {
-        let mut buffer: PrioQueue<()> = PrioQueue::new();
+        let mut buffer: FixedHeap<()> = FixedHeap::new();
         assert_eq!(0, buffer.size());
         assert!(buffer.offer(()).is_ok());
         assert_eq!(1, buffer.size());
@@ -119,7 +119,7 @@ mod tests {
 
     #[test]
     fn test_priority() {
-        let mut buffer: PrioQueue<usize> = PrioQueue::new();
+        let mut buffer: FixedHeap<usize> = FixedHeap::new();
         buffer.offer(1).unwrap();
         buffer.offer(3).unwrap();
         buffer.offer(2).unwrap();

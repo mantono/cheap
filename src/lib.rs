@@ -1,2 +1,4 @@
-pub mod channel;
-mod queue;
+mod channel;
+mod heap;
+
+pub use channel::channel;

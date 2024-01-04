@@ -3,13 +3,14 @@ use std::sync::atomic::Ordering::Relaxed;
 use std::sync::{atomic::AtomicUsize, Arc, Condvar, Mutex};
 use std::time::Duration;
 
-use crate::queue::PrioQueue;
+use crate::heap::FixedHeap;
 
+/// Create a channel with a fixed capacity that is backed by a heap
 pub fn channel<T>(capacity: usize) -> (Sender<T>, Receiver<T>)
 where
     T: Ord,
 {
-    let buffer: PrioQueue<T> = PrioQueue::with_capacity(capacity);
+    let buffer: FixedHeap<T> = FixedHeap::with_capacity(capacity);
     let shared = Shared {
         buffer: Mutex::new(buffer),
         receivers: Condvar::new(),
@@ -235,7 +236,7 @@ struct Shared<T>
 where
     T: Ord,
 {
-    buffer: Mutex<PrioQueue<T>>,
+    buffer: Mutex<FixedHeap<T>>,
     receivers: Condvar,
     senders: Condvar,
     sender_count: AtomicUsize,

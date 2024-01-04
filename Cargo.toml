@@ -1,5 +1,13 @@
 [package]
-name = "prio"
+name = "cheap"
 version = "0.1.0"
 authors = ["Anton Österberg <anton@42x.io>"]
 edition = "2021"
+description = "A channel backed by a binary heap"
+license = "MIT"
+keywords = ["channel", "heap", "data-structure", "priority", "queue"]
+categories = ["concurrency", "data-structures"]
+
+[lints.rust]
+unsafe_code = "forbid"
+
