@@ -7,7 +7,3 @@ description = "A channel backed by a binary heap"
 license = "MIT"
 keywords = ["channel", "heap", "data-structure", "priority", "queue"]
 categories = ["concurrency", "data-structures"]
-
-[lints.rust]
-unsafe_code = "forbid"
-
