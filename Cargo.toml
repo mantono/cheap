@@ -7,3 +7,6 @@ description = "A channel backed by a binary heap"
 license = "MIT"
 keywords = ["channel", "heap", "data-structure", "priority", "queue"]
 categories = ["concurrency", "data-structures"]
+
+[dependencies]
+log = "0.4"

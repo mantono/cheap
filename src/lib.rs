@@ -30,6 +30,8 @@ where
         shared: shared.clone(),
     };
 
+    log::debug!("Sender and receiver created");
+
     (sender, reciever)
 }
 
@@ -60,19 +62,31 @@ where
 {
     pub fn offer(&self, item: T) -> Result<(), SendError<T>> {
         if self.shared.is_closed() {
+            log::info!("Sender: Offer failed, channel is closed");
             return Err(SendError::Closed(item));
         }
         match self.shared.buffer.try_lock() {
             Ok(mut buffer) => match buffer.offer(item) {
                 Ok(_) => {
+                    log::debug!("Sender: Item sent to channel");
                     self.shared.receivers.notify_one();
+                    log::trace!("Sender: Notified one receiver");
                     Ok(())
                 }
-                Err(item) => Err(SendError::Full(item)),
+                Err(item) => {
+                    log::debug!("Sender: Offer failed, channel was full");
+                    Err(SendError::Full(item))
+                }
             },
             Err(e) => match e {
-                std::sync::TryLockError::Poisoned(_) => panic!("Lock should never be poisioned"),
-                std::sync::TryLockError::WouldBlock => Err(SendError::Locked(item)),
+                std::sync::TryLockError::Poisoned(_) => {
+                    log::error!("Sender: Lock is poisoned");
+                    panic!("Lock should never be poisioned")
+                }
+                std::sync::TryLockError::WouldBlock => {
+                    log::debug!("Sender: Unable to acquire lock");
+                    Err(SendError::Locked(item))
+                }
             },
         }
     }
@@ -88,6 +102,7 @@ where
     }
 
     fn wait(&self, item: T, duration: Duration) -> Result<(), SendError<T>> {
+        log::trace!("Sender: Waiting for channel to free up capacity or become unlocked");
         let guard = self.shared.buffer.lock().unwrap();
         let mut guard = if !guard.is_full() {
             guard
@@ -151,23 +166,35 @@ where
     T: Ord,
 {
     pub fn poll(&self) -> Result<T, RecvError> {
+        log::trace!("Receiver: Polling");
         match self.shared.buffer.try_lock() {
             Ok(mut buffer) => match buffer.poll() {
                 Some(item) => {
+                    log::trace!(
+                        "Receiver: Polled item, notifying one sender about freed up capacity"
+                    );
                     self.shared.senders.notify_one();
                     Ok(item)
                 }
                 None => {
                     if self.shared.is_closed() {
+                        log::info!("Receiver: Channel is closed");
                         Err(RecvError::Closed)
                     } else {
+                        log::debug!("Receiver: Channel is empty");
                         Err(RecvError::Empty)
                     }
                 }
             },
             Err(e) => match e {
-                std::sync::TryLockError::Poisoned(_) => panic!("Lock should never be poisioned"),
-                std::sync::TryLockError::WouldBlock => Err(RecvError::Locked),
+                std::sync::TryLockError::Poisoned(_) => {
+                    log::error!("Receiver: Lock is poisoned");
+                    panic!("Lock should never be poisioned")
+                }
+                std::sync::TryLockError::WouldBlock => {
+                    log::debug!("Receiver: Unable to acquire lock");
+                    Err(RecvError::Locked)
+                }
             },
         }
     }
