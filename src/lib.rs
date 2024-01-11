@@ -301,7 +301,9 @@ mod tests {
 
         thread::spawn(move || {
             assert_eq!(Ok(32), rec.poll());
-        });
+        })
+        .join()
+        .unwrap();
     }
 
     #[test]
@@ -360,7 +362,9 @@ mod tests {
 
         thread::spawn(move || {
             assert_eq!(Err(SendError::Closed(0)), send.offer(0));
-        });
+        })
+        .join()
+        .unwrap();
     }
 
     #[test]
