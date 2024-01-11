@@ -111,6 +111,10 @@ where
             let (guard, timed_out) = self.shared.senders.wait_timeout(guard, duration).unwrap();
             if timed_out.timed_out() {
                 return Err(SendError::Full(item));
+            } else if self.shared.is_closed() {
+                return Err(SendError::Closed(item));
+            } else if guard.is_full() {
+                return Err(SendError::Full(item));
             }
             guard
         };
