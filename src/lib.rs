@@ -152,6 +152,7 @@ where
         if self.shared.sender_count.load(Acquire) == 0 {
             self.shared.receivers.notify_all();
         }
+        log::info!("Sender: Drop invoked");
     }
 }
 
@@ -259,6 +260,7 @@ where
         if self.shared.receiver_count.load(Acquire) == 0 {
             self.shared.senders.notify_all();
         }
+        log::info!("Receiver: Drop invoked");
     }
 }
 
