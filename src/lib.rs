@@ -368,6 +368,16 @@ mod tests {
     }
 
     #[test]
+    fn test_send_to_full_and_closed_channel() {
+        let (send, rec) = channel::<usize>(3);
+        send.offer(0).unwrap();
+        send.offer(1).unwrap();
+        send.offer(2).unwrap();
+        rec.close();
+        assert_eq!(Err(SendError::Closed(4)), send.offer(4));
+    }
+
+    #[test]
     fn test_different_threads_with_timeouts() {
         let (send, rec) = channel::<usize>(4);
 
