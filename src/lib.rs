@@ -2,6 +2,7 @@ mod heap;
 
 use std::sync::atomic::Ordering::Acquire;
 use std::sync::atomic::Ordering::Relaxed;
+use std::sync::MutexGuard;
 use std::sync::{atomic::AtomicUsize, Arc, Condvar, Mutex};
 use std::time::Duration;
 
@@ -104,7 +105,7 @@ where
     fn wait(&self, item: T, duration: Duration) -> Result<(), SendError<T>> {
         log::trace!("Sender: Waiting for channel to free up capacity or become unlocked");
         let guard = self.shared.buffer.lock().unwrap();
-        let mut guard = if !guard.is_full() {
+        let mut guard: MutexGuard<'_, FixedHeap<T>> = if !guard.is_full() {
             guard
         } else {
             let (guard, timed_out) = self.shared.senders.wait_timeout(guard, duration).unwrap();
