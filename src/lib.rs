@@ -341,7 +341,9 @@ mod tests {
         thread::spawn(move || {
             assert_eq!(Ok(2), rec.poll());
             assert_eq!(Ok(1), rec.poll());
-        });
+        })
+        .join()
+        .unwrap();
     }
 
     #[test]
