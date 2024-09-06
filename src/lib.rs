@@ -38,8 +38,15 @@ where
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum SendError<T> {
+    /// The channel has been closed and cannot be used for sending any more elements.
+    /// This is a terminal and permanent state.
     Closed(T),
+    /// The channel is currently locked and in use by another thread.
+    /// Attempting to send the element later may yield a different outcome.
     Locked(T),
+    /// The channel is full and cannot receive any more elements until at least one element in the
+    /// channel has been removed.
+    /// Once the channel is no longer full it may be possible to send a new element to the channel.
     Full(T),
 }
 
