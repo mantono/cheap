@@ -1,3 +1,26 @@
+//! A channel backed by a binary heap.
+//!
+//! This crate provides a priority queue channel implementation where items are ordered
+//! by their natural ordering (using `Ord`). Messages sent through the channel are
+//! automatically prioritized, with the highest priority items being received first.
+//!
+//! # Examples
+//!
+//! ```
+//! use cheap::channel;
+//!
+//! let (sender, receiver) = channel(10);
+//! sender.offer(5)?;
+//! sender.offer(3)?;
+//! sender.offer(8)?;
+//!
+//! // Items are received in priority order (highest first)
+//! assert_eq!(receiver.poll().unwrap(), 8);
+//! assert_eq!(receiver.poll().unwrap(), 5);
+//! assert_eq!(receiver.poll().unwrap(), 3);
+//! # Ok::<(), cheap::SendError<i32>>(())
+//! ```
+
 mod heap;
 
 use std::sync::atomic::Ordering::Acquire;
@@ -36,6 +59,7 @@ where
     (sender, reciever)
 }
 
+/// Error type returned when sending to a channel fails.
 #[derive(Debug, PartialEq, Eq)]
 pub enum SendError<T> {
     /// The channel has been closed and cannot be used for sending any more elements.
@@ -50,13 +74,25 @@ pub enum SendError<T> {
     Full(T),
 }
 
+/// Error type returned when receiving from a channel fails.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RecvError {
+    /// The channel is currently locked and in use by another thread.
+    /// Attempting to receive later may yield a different outcome.
     Locked,
+    /// The channel has been closed and no more elements can be received.
+    /// This is a terminal and permanent state.
     Closed,
+    /// The channel is empty and contains no elements to receive.
+    /// Once an element is added to the channel it may be possible to receive.
     Empty,
 }
 
+/// The sending side of a channel.
+///
+/// Values can be sent into the channel using [`Sender::offer`] or [`Sender::offer_timeout`].
+/// Multiple senders can be created by cloning this struct.
+/// The channel is closed when all senders are dropped.
 pub struct Sender<T>
 where
     T: Ord,
@@ -68,6 +104,26 @@ impl<T> Sender<T>
 where
     T: Ord,
 {
+    /// Attempts to send an item into the channel without blocking.
+    ///
+    /// This method will return immediately, either successfully sending the item
+    /// or returning an error if the channel is full, locked, or closed.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SendError::Closed`] if the channel has been closed.
+    /// Returns [`SendError::Locked`] if the channel is currently locked by another thread.
+    /// Returns [`SendError::Full`] if the channel is at capacity.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use cheap::channel;
+    ///
+    /// let (sender, receiver) = channel(10);
+    /// sender.offer(42)?;
+    /// # Ok::<(), cheap::SendError<i32>>(())
+    /// ```
     pub fn offer(&self, item: T) -> Result<(), SendError<T>> {
         if self.shared.is_closed() {
             log::info!("Sender: Offer failed, channel is closed");
@@ -99,6 +155,26 @@ where
         }
     }
 
+    /// Attempts to send an item into the channel, waiting up to the specified duration.
+    ///
+    /// This method will wait for the channel to have capacity if it is currently full or locked.
+    /// If the channel does not become available within the specified duration, it returns an error.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SendError::Closed`] if the channel has been closed.
+    /// Returns [`SendError::Full`] if the channel is still full after waiting for the duration.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use cheap::channel;
+    /// use std::time::Duration;
+    ///
+    /// let (sender, receiver) = channel(10);
+    /// sender.offer_timeout(42, Duration::from_secs(1))?;
+    /// # Ok::<(), cheap::SendError<i32>>(())
+    /// ```
     pub fn offer_timeout(&self, item: T, duration: Duration) -> Result<(), SendError<T>> {
         match self.offer(item) {
             Ok(_) => Ok(()),
@@ -136,6 +212,10 @@ where
         Ok(())
     }
 
+    /// Closes the sender by dropping it.
+    ///
+    /// This is equivalent to dropping the sender, but makes the intent explicit.
+    /// When all senders are closed, receivers will eventually receive a [`RecvError::Closed`].
     pub fn close(self) {
         drop(self)
     }
@@ -167,6 +247,11 @@ where
     }
 }
 
+/// The receiving side of a channel.
+///
+/// Values can be received from the channel using [`Receiver::poll`] or [`Receiver::poll_timeout`].
+/// Multiple receivers can be created by cloning this struct.
+/// The channel is closed when all receivers are dropped.
 pub struct Receiver<T>
 where
     T: Ord,
@@ -178,6 +263,28 @@ impl<T> Receiver<T>
 where
     T: Ord,
 {
+    /// Attempts to receive an item from the channel without blocking.
+    ///
+    /// This method will return immediately, either successfully receiving an item
+    /// or returning an error if the channel is empty, locked, or closed.
+    /// Items are received in priority order, with the highest priority item returned first.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`RecvError::Closed`] if the channel has been closed.
+    /// Returns [`RecvError::Locked`] if the channel is currently locked by another thread.
+    /// Returns [`RecvError::Empty`] if the channel contains no items.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use cheap::channel;
+    ///
+    /// let (sender, receiver) = channel(10);
+    /// sender.offer(42).unwrap();
+    /// assert_eq!(receiver.poll()?, 42);
+    /// # Ok::<(), cheap::RecvError>(())
+    /// ```
     pub fn poll(&self) -> Result<T, RecvError> {
         log::trace!("Receiver: Polling");
         match self.shared.buffer.try_lock() {
@@ -212,6 +319,28 @@ where
         }
     }
 
+    /// Attempts to receive an item from the channel, waiting up to the specified duration.
+    ///
+    /// This method will wait for the channel to have an item available if it is currently empty or locked.
+    /// If an item does not become available within the specified duration, it returns an error.
+    /// Items are received in priority order, with the highest priority item returned first.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`RecvError::Closed`] if the channel has been closed.
+    /// Returns [`RecvError::Empty`] if the channel is still empty after waiting for the duration.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use cheap::channel;
+    /// use std::time::Duration;
+    ///
+    /// let (sender, receiver) = channel(10);
+    /// sender.offer(42).unwrap();
+    /// assert_eq!(receiver.poll_timeout(Duration::from_secs(1))?, 42);
+    /// # Ok::<(), cheap::RecvError>(())
+    /// ```
     pub fn poll_timeout(&self, duration: Duration) -> Result<T, RecvError> {
         match self.poll() {
             Ok(item) => Ok(item),
@@ -244,6 +373,10 @@ where
         }
     }
 
+    /// Closes the receiver by dropping it.
+    ///
+    /// This is equivalent to dropping the receiver, but makes the intent explicit.
+    /// When all receivers are closed, senders will eventually receive a [`SendError::Closed`].
     pub fn close(self) {
         drop(self)
     }
