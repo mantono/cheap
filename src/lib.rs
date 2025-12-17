@@ -10,14 +10,15 @@
 //! use cheap::channel;
 //!
 //! let (sender, receiver) = channel(10);
-//! sender.offer(5).unwrap();
-//! sender.offer(3).unwrap();
-//! sender.offer(8).unwrap();
+//! sender.offer(5)?;
+//! sender.offer(3)?;
+//! sender.offer(8)?;
 //!
 //! // Items are received in priority order (highest first)
 //! assert_eq!(receiver.poll().unwrap(), 8);
 //! assert_eq!(receiver.poll().unwrap(), 5);
 //! assert_eq!(receiver.poll().unwrap(), 3);
+//! # Ok::<(), cheap::SendError<i32>>(())
 //! ```
 
 mod heap;
@@ -120,7 +121,8 @@ where
     /// use cheap::channel;
     ///
     /// let (sender, receiver) = channel(10);
-    /// sender.offer(42).unwrap();
+    /// sender.offer(42)?;
+    /// # Ok::<(), cheap::SendError<i32>>(())
     /// ```
     pub fn offer(&self, item: T) -> Result<(), SendError<T>> {
         if self.shared.is_closed() {
@@ -170,7 +172,8 @@ where
     /// use std::time::Duration;
     ///
     /// let (sender, receiver) = channel(10);
-    /// sender.offer_timeout(42, Duration::from_secs(1)).unwrap();
+    /// sender.offer_timeout(42, Duration::from_secs(1))?;
+    /// # Ok::<(), cheap::SendError<i32>>(())
     /// ```
     pub fn offer_timeout(&self, item: T, duration: Duration) -> Result<(), SendError<T>> {
         match self.offer(item) {
@@ -279,7 +282,8 @@ where
     ///
     /// let (sender, receiver) = channel(10);
     /// sender.offer(42).unwrap();
-    /// assert_eq!(receiver.poll().unwrap(), 42);
+    /// assert_eq!(receiver.poll()?, 42);
+    /// # Ok::<(), cheap::RecvError>(())
     /// ```
     pub fn poll(&self) -> Result<T, RecvError> {
         log::trace!("Receiver: Polling");
@@ -334,7 +338,8 @@ where
     ///
     /// let (sender, receiver) = channel(10);
     /// sender.offer(42).unwrap();
-    /// assert_eq!(receiver.poll_timeout(Duration::from_secs(1)).unwrap(), 42);
+    /// assert_eq!(receiver.poll_timeout(Duration::from_secs(1))?, 42);
+    /// # Ok::<(), cheap::RecvError>(())
     /// ```
     pub fn poll_timeout(&self, duration: Duration) -> Result<T, RecvError> {
         match self.poll() {
